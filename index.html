@@ -1,0 +1,403 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><script>
+(function(){
+  var __k="56eebafc-2357-4093-9735-5d67b5a5876e";
+  var __a=null;
+  var __preload=null;
+  if(!__k)return;
+  var _f=window.fetch;
+  // S3 URL → file_key 추출 후 __a 매핑 lookup → assets/ 로컬 경로 치환
+  // 응답에 새 signed URL이 와도 같은 file_key면 같은 assets/ → 영구 작동
+  function patchUrls(data){
+    if(!__a)return data;
+    try{
+      var s=JSON.stringify(data);
+      // 응답 안의 모든 S3 URL을 정규식으로 찾고, file_key 추출 → 매핑 lookup
+      s=s.replace(/https:\/\/prod-files-secure\.s3\.amazonaws\.com\/[^"\s<>]+/g,function(url){
+        var m=url.match(/\.amazonaws\.com\/([^?\\]+)/);
+        if(!m)return url;
+        var key=m[1].replace(/\\u002F/g,"/");
+        return __a[key]||url;
+      });
+      return JSON.parse(s);
+    }catch(e){return data;}
+  }
+  function callMisiso(method,path,body){
+    return _f("https://misiso.com/api/notion/deploy-proxy",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({deployKey:__k,path:path,method:method,body:body})
+    }).then(function(r){
+      var status=r.status;
+      return r.json().then(function(data){return {status:status,data:patchUrls(data)};});
+    });
+  }
+  // preload pattern — 페이지 로드와 병렬로 정적 fetch 호출 미리 시작
+  var __preloadCache={};
+  if(__preload){
+    for(var i=0;i<__preload.length;i++){
+      (function(c){
+        var key=c.method+":"+c.path+":"+(c.body?JSON.stringify(c.body):"");
+        __preloadCache[key]=callMisiso(c.method,c.path,c.body);
+      })(__preload[i]);
+    }
+  }
+  window.fetch=function(url,opts){
+    var u=typeof url==="string"?url:String(url);
+    if(!u.startsWith("/api/notion/"))return _f.apply(this,arguments);
+    var path=u.slice("/api/notion".length);
+    var method=(opts&&opts.method)||"GET";
+    var body;
+    try{body=opts&&opts.body?JSON.parse(opts.body):undefined;}catch(e){body=opts&&opts.body;}
+    var ck=method+":"+path+":"+(body?JSON.stringify(body):"");
+    var promise=__preloadCache[ck];
+    if(promise){delete __preloadCache[ck];}
+    else{promise=callMisiso(method,path,body);}
+    return promise.then(function(res){
+      return new Response(JSON.stringify(res.data),{
+        status:res.status,
+        headers:{"Content-Type":"application/json"}
+      });
+    });
+  };
+})();
+</script>
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://misiso.com" crossorigin/>
+<meta property="og:title" content="한의원AI진료자동화-MVP"/>
+<meta property="og:description" content="한의원AI진료자동화-MVP"/>
+<title>한의원AI진료자동화-MVP</title>
+<meta name="description" content="한의원AI진료자동화-MVP"/>
+<meta property="og:image" content="https://Raphael-KR.github.io/notion-preview-8a0b1aaf/og-image-00gmixq3.png"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://Raphael-KR.github.io/notion-preview-8a0b1aaf/og-image-00gmixq3.png"/>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2032%2032'%3E%3Crect%20width%3D'32'%20height%3D'32'%20rx%3D'6'%20fill%3D'%236366f1'%2F%3E%3Ctext%20x%3D'16'%20y%3D'22'%20text-anchor%3D'middle'%20font-size%3D'18'%20fill%3D'white'%20font-family%3D'sans-serif'%3EA%3C%2Ftext%3E%3C%2Fsvg%3E"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root {
+  --bg: #f8fafc;
+  --panel: #ffffff;
+  --line: #e2e8f0;
+  --text: #0f172a;
+  --muted: #64748b;
+  --blue: #2563eb;
+  --green: #16a34a;
+  --amber: #d97706;
+  --red: #dc2626;
+  --slate: #334155;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, Pretendard, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+button {
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: var(--blue);
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+button.secondary {
+  background: #e2e8f0;
+  color: var(--slate);
+}
+
+button.danger {
+  background: var(--red);
+}
+
+button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.app {
+  width: min(1440px, 100%);
+  margin: 0 auto;
+  padding: 28px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+  margin-bottom: 22px;
+}
+
+.header h1 {
+  margin: 0 0 8px;
+  font-size: 30px;
+  letter-spacing: -0.04em;
+}
+
+.header p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.warning {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border: 1px solid #fecaca;
+  background: #fff1f2;
+  color: #991b1b;
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1.15fr .85fr;
+  gap: 18px;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.card,
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .04);
+}
+
+.card {
+  padding: 16px;
+}
+
+.card .label {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.card .value {
+  margin-top: 8px;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.panel {
+  padding: 18px;
+  margin-bottom: 18px;
+}
+
+.panel h2 {
+  margin: 0 0 12px;
+  font-size: 19px;
+}
+
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.state {
+  padding: 12px;
+  border-radius: 12px;
+  background: #f1f5f9;
+  color: var(--slate);
+}
+
+.state.error {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.state.mock {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.list {
+  display: grid;
+  gap: 10px;
+}
+
+.item {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  background: #fff;
+}
+
+.item-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.title {
+  font-weight: 800;
+}
+
+.meta {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.badge.green {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.badge.amber {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.badge.red {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.queue-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table th,
+.table td {
+  border-bottom: 1px solid var(--line);
+  padding: 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.table th {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.kv {
+  display: grid;
+  gap: 8px;
+}
+
+.kv-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px dashed var(--line);
+  padding-bottom: 8px;
+}
+
+.kv-row span:first-child {
+  color: var(--muted);
+}
+
+.footer-note {
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+@media (max-width: 1024px) {
+  .grid,
+  .cards {
+    grid-template-columns: 1fr;
+  }
+
+  .header {
+    flex-direction: column;
+  }
+}
+</style>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script>if(window.Babel)Babel.disableScriptTags=true;</script>
+</head><body><div id="root"></div>
+<rect width='32' height='32' rx='6' fill='%233b82f6'/><text x='16' y='22' text-anchor='middle' font-size='18' fill='white' font-family='sans-serif'>한</text></svg>"><script type="module">
+var __np_strip_imports=function(){return{visitor:{ImportDeclaration:function(path){var src=path.node.source.value;if(src.indexOf("./")===0||src.indexOf("../")===0)path.remove();},ExportDefaultDeclaration:function(path){var decl=path.node.declaration;if(decl.type==="FunctionDeclaration"||decl.type==="ClassDeclaration"){path.replaceWith(decl);}else{path.replaceWith({type:"VariableDeclaration",kind:"var",declarations:[{type:"VariableDeclarator",id:{type:"Identifier",name:"_default"},init:decl}]});}},ExportNamedDeclaration:function(path){if(path.node.declaration){path.replaceWith(path.node.declaration);}else{path.remove();}},ExportAllDeclaration:function(path){path.remove();}}};};
+var __np_dedupe_top_consts=function(){var _s={};return{visitor:{VariableDeclaration:function(p){if(p.parent.type!=="Program")return;if(p.node.kind!=="const"&&p.node.kind!=="let")return;var kept=[];for(var i=0;i<p.node.declarations.length;i++){var d=p.node.declarations[i];var n=d.id&&d.id.type==="Identifier"?d.id.name:null;if(n&&_s[n]){}else{if(n)_s[n]=true;kept.push(d);}}if(kept.length===0){p.remove();}else{p.node.declarations=kept;}}}}};
+var __np_jsx_decode=function(){function _d(v){v=v.replace(/\\u\{([0-9a-fA-F]+)\}/g,function(_,h){return String.fromCodePoint(parseInt(h,16));});v=v.replace(/\\u([0-9a-fA-F]{4})/g,function(_,h){return String.fromCharCode(parseInt(h,16));});return v;}return{visitor:{JSXText:function(p){p.node.value=_d(p.node.value);},StringLiteral:function(p){if(!p.parent||p.parent.type!=="JSXAttribute")return;p.node.value=_d(p.node.value);}}}};
+var __code="import React from 'https://esm.sh/react';\nimport ReactDOM from 'https://esm.sh/react-dom/client';\nimport { useEffect, useMemo, useRef, useState } from 'https://esm.sh/react';\n\nconst CONSULTATION_DB_ID = '_NP_DB_11111111';\nconst AI_DOCUMENT_DB_ID = '_NP_DB_22222222';\nconst MEDICINE_KB_DB_ID = '_NP_DB_33333333';\nconst CRM_QUEUE_DB_ID = '_NP_DB_44444444';\nconst CRM_LOG_DB_ID = '_NP_DB_55555555';\nconst CRM_TEMPLATE_DB_ID = '_NP_DB_66666666';\nconst ENV_DB_ID = '_NP_DB_77777777';\n\nconst DEFAULT_POLL_INTERVAL_SECONDS = 30;\nconst RESERVATION_OVERDUE_MINUTES = 30;\nconst MOCK_NOW = new Date().toISOString();\n\nconst FALLBACK_ENV = {\n  KAKAO_CHANNEL_API_BASE_URL: 'https://kapi.kakao.com',\n  KAKAO_CHANNEL_ACCESS_TOKEN: 'mock-token-for-internal-preview',\n  KAKAO_CHANNEL_ID: 'clinic-channel',\n  POLL_INTERVAL_SECONDS: '30',\n  MAX_RETRY_COUNT: '3',\n  TIMEZONE: 'Asia/Seoul',\n};\n\nconst FALLBACK_SESSIONS = [\n  {\n    id: 'session-1',\n    title: '오전 초진 A-1023',\n    patientCode: 'A-1023',\n    visitDate: '2026-05-13',\n    doctor: '담당 한의사',\n    symptoms: ['소화불량', '피로', '수면불량'],\n    patternKeywords: ['비위기허', '간울'],\n    stage: '문진완료',\n    aiStatus: 'AI생성대기',\n    sendStatus: 'CRM발송대기',\n  },\n  {\n    id: 'session-2',\n    title: '재진 B-2041',\n    patientCode: 'B-2041',\n    visitDate: '2026-05-13',\n    doctor: '담당 한의사',\n    symptoms: ['요통', '저림'],\n    patternKeywords: ['어혈', '한습'],\n    stage: '한의사검토중',\n    aiStatus: 'AI생성완료',\n    sendStatus: '대기',\n  },\n];\n\nconst FALLBACK_KB = [\n  {\n    id: 'kb-1',\n    title: '비위기허 소화불량 문진 포인트',\n    type: '변증',\n    symptoms: ['소화불량', '피로'],\n    patterns: ['비위기허'],\n    summary: '식후 더부룩함, 권태감, 대변 양상, 식욕 저하를 함께 확인합니다.',\n    caution: '급격한 체중 감소, 혈변, 지속 구토는 별도 확인이 필요합니다.',\n    status: '사용중',\n  },\n  {\n    id: 'kb-2',\n    title: '수면불량 생활관리 설명 문구',\n    type: '생활관리',\n    symptoms: ['수면불량', '피로'],\n    patterns: ['간울'],\n    summary: '카페인, 야간 스크린, 취침 전 과식 여부를 확인하고 수면 루틴을 안내합니다.',\n    caution: '우울, 불안, 약물 복용력 확인이 필요합니다.',\n    status: '사용중',\n  },\n  {\n    id: 'kb-3',\n    title: '요통 위험 신호 체크',\n    type: '금기',\n    symptoms: ['요통', '저림'],\n    patterns: ['어혈', '한습'],\n    summary: '외상, 발열, 배뇨장애, 진행성 근력저하 여부를 먼저 확인합니다.',\n    caution: '신경학적 결손이 진행되면 즉시 의학적 평가가 필요합니다.',\n    status: '사용중',\n  },\n];\n\nconst FALLBACK_QUEUE = [\n  {\n    id: 'queue-1',\n    title: 'A-1023 진료 리포트 발송',\n    source: '진료 리포트',\n    receiverName: 'A-1023',\n    receiverKey: 'kakao-user-a1023',\n    messageType: 'text',\n    messageBody: '안녕하세요. patientCode님, 오늘 진료 리포트가 준비되었습니다. reportLink',\n    reportLink: 'https://example.com/report/a1023',\n    approvalStatus: '승인완료',\n    sendStatus: '발송대기',\n    sendMode: '즉시',\n    scheduledAt: null,\n    retryCount: 0,\n    lastError: '',\n  },\n  {\n    id: 'queue-2',\n    title: 'B-2041 복약 안내 예약 발송',\n    source: '복약 안내',\n    receiverName: 'B-2041',\n    receiverKey: 'kakao-user-b2041',\n    messageType: 'text',\n    messageBody: 'patientCode님, 복약 안내입니다. 식후 30분에 복용해 주세요.',\n    reportLink: '',\n    approvalStatus: '승인완료',\n    sendStatus: '예약됨',\n    sendMode: '예약',\n    scheduledAt: '2026-05-13T12:30:00+09:00',\n    retryCount: 0,\n    lastError: '',\n  },\n  {\n    id: 'queue-3',\n    title: 'C-1188 재시도 필요',\n    source: '재내원 리마인드',\n    receiverName: 'C-1188',\n    receiverKey: '',\n    messageType: 'text',\n    messageBody: '재내원 안내 메시지입니다.',\n    reportLink: '',\n    approvalStatus: '승인완료',\n    sendStatus: '실패',\n    sendMode: '즉시',\n    scheduledAt: null,\n    retryCount: 2,\n    lastError: '수신 식별자 누락',\n  },\n];\n\nfunction getText(prop) {\n  if (!prop) return '';\n  if (prop.type === 'title') return prop.title.map((item) => item.plain_text).join('');\n  if (prop.type === 'rich_text') return prop.rich_text.map((item) => item.plain_text).join('');\n  if (prop.type === 'select') return prop.select?.name ?? '';\n  if (prop.type === 'status') return prop.status?.name ?? '';\n  if (prop.type === 'multi_select') return prop.multi_select.map((item) => item.name);\n  if (prop.type === 'date') return prop.date?.start ?? '';\n  if (prop.type === 'number') return prop.number ?? 0;\n  if (prop.type === 'checkbox') return prop.checkbox ? 'true' : 'false';\n  if (prop.type === 'url') return prop.url ?? '';\n  return '';\n}\n\nfunction maskSecret(value) {\n  if (!value) return '없음';\n  if (value.length <= 8) return '****';\n  return `${value.slice(0, 4)}****${value.slice(-4)}`;\n}\n\nfunction renderTemplate(template, variables) {\n  return Object.entries(variables).reduce((text, [key, value]) => {\n    return text.replaceAll(`{{${key}}}`, String(value ?? ''));\n  }, template);\n}\n\nfunction isDue(scheduledAt) {\n  if (!scheduledAt) return true;\n  return new Date(scheduledAt).getTime() <= Date.now();\n}\n\nfunction isOverdue(scheduledAt) {\n  if (!scheduledAt) return false;\n  const diffMs = Date.now() - new Date(scheduledAt).getTime();\n  return diffMs > RESERVATION_OVERDUE_MINUTES * 60 * 1000;\n}\n\nfunction isProcessable(item) {\n  const statuses = ['발송대기', '예약됨', '실패', '재시도대기'];\n  return item.approvalStatus === '승인완료' && statuses.includes(item.sendStatus);\n}\n\nasync function queryDatabase(dbId, body) {\n  const response = await fetch(`/api/notion/databases/${dbId}/query`, {\n    method: 'POST',\n    headers: { 'Content-Type': 'application/json' },\n    body: JSON.stringify(body ?? { page_size: 100 }),\n  });\n\n  if (!response.ok) {\n    throw new Error(`Notion DB 조회 실패: ${response.status}`);\n  }\n\n  return response.json();\n}\n\nasync function patchNotionPage(pageId, properties) {\n  const response = await fetch(`/api/notion/pages/${pageId}`, {\n    method: 'PATCH',\n    headers: { 'Content-Type': 'application/json' },\n    body: JSON.stringify({ properties }),\n  });\n\n  if (!response.ok) {\n    throw new Error(`Notion page 업데이트 실패: ${response.status}`);\n  }\n\n  return response.json();\n}\n\nasync function createNotionPage(parentDbId, properties) {\n  const response = await fetch('/api/notion/pages', {\n    method: 'POST',\n    headers: { 'Content-Type': 'application/json' },\n    body: JSON.stringify({\n      parent: { database_id: parentDbId },\n      properties,\n    }),\n  });\n\n  if (!response.ok) {\n    throw new Error(`Notion page 생성 실패: ${response.status}`);\n  }\n\n  return response.json();\n}\n\nasync function loadEnvSettings() {\n  try {\n    const data = await queryDatabase(ENV_DB_ID);\n    const entries = data.results || [];\n    if (!entries.length) return { env: FALLBACK_ENV, usedFallback: true };\n\n    const env = {};\n    entries.forEach((page) => {\n      const key = getText(page.properties.Key);\n      const value = getText(page.properties.Value);\n      const enabled = getText(page.properties['사용 여부']);\n      if (key && enabled !== 'false') env[key] = value;\n    });\n\n    return { env: { ...FALLBACK_ENV, ...env }, usedFallback: false };\n  } catch (error) {\n    console.warn('[ENV] 조회 실패, fallback 사용:', error.message);\n    return { env: FALLBACK_ENV, usedFallback: true };\n  }\n}\n\nasync function loadSessions() {\n  try {\n    const data = await queryDatabase(CONSULTATION_DB_ID);\n    const rows = data.results || [];\n    if (!rows.length) return { sessions: FALLBACK_SESSIONS, usedFallback: true };\n\n    const sessions = rows.map((page) => ({\n      id: page.id,\n      title: getText(page.properties['세션명']) || '제목 없음',\n      patientCode: getText(page.properties['환자 코드']),\n      visitDate: getText(page.properties['방문일']),\n      doctor: getText(page.properties['담당 한의사']),\n      symptoms: getText(page.properties['주요 증상']) || [],\n      patternKeywords: getText(page.properties['추정 변증']) || [],\n      stage: getText(page.properties['진료 단계']),\n      aiStatus: getText(page.properties['AI 문서 생성 상태']),\n      sendStatus: getText(page.properties['CRM 발송 상태']),\n    }));\n\n    return { sessions, usedFallback: false };\n  } catch (error) {\n    console.warn('[진료 세션] 조회 실패, fallback 사용:', error.message);\n    return { sessions: FALLBACK_SESSIONS, usedFallback: true };\n  }\n}\n\nasync function loadMedicineKb() {\n  try {\n    const data = await queryDatabase(MEDICINE_KB_DB_ID);\n    const rows = data.results || [];\n    if (!rows.length) return { kb: FALLBACK_KB, usedFallback: true };\n\n    const kb = rows.map((page) => ({\n      id: page.id,\n      title: getText(page.properties['자료명']) || '자료명 없음',\n      type: getText(page.properties['자료 유형']),\n      symptoms: getText(page.properties['관련 증상']) || [],\n      patterns: getText(page.properties['관련 변증']) || [],\n      summary: getText(page.properties['핵심 요약']),\n      caution: getText(page.properties['주의/금기']),\n      status: getText(page.properties['사용 상태']),\n    }));\n\n    return { kb, usedFallback: false };\n  } catch (error) {\n    console.warn('[한의학 자료] 조회 실패, fallback 사용:', error.message);\n    return { kb: FALLBACK_KB, usedFallback: true };\n  }\n}\n\nasync function loadCrmQueue() {\n  try {\n    const data = await queryDatabase(CRM_QUEUE_DB_ID);\n    const rows = data.results || [];\n    if (!rows.length) return { queue: FALLBACK_QUEUE, usedFallback: true };\n\n    const queue = rows.map((page) => ({\n      id: page.id,\n      title: getText(page.properties['요청명']) || '요청명 없음',\n      source: getText(page.properties['발송 출처']),\n      receiverName: getText(page.properties['수신자 이름 또는 코드']),\n      receiverKey: getText(page.properties['카카오채널 수신 식별자']),\n      messageType: getText(page.properties['메시지 유형']),\n      messageBody: getText(page.properties['메시지 본문']),\n      reportLink: getText(page.properties['첨부 링크 또는 리포트 링크']),\n      approvalStatus: getText(page.properties['승인 상태']),\n      sendStatus: getText(page.properties['발송 상태']),\n      sendMode: getText(page.properties['발송 방식']),\n      scheduledAt: getText(page.properties['예약 시각']),\n      retryCount: Number(getText(page.properties['재시도 횟수']) || 0),\n      lastError: getText(page.properties['마지막 오류']),\n    }));\n\n    return { queue, usedFallback: false };\n  } catch (error) {\n    console.warn('[CRM 큐] 조회 실패, fallback 사용:', error.message);\n    return { queue: FALLBACK_QUEUE, usedFallback: true };\n  }\n}\n\nasync function sendKakaoChannelMessage(env, item, renderedBody) {\n  if (!env.KAKAO_CHANNEL_ACCESS_TOKEN) {\n    throw new Error('KAKAO_CHANNEL_ACCESS_TOKEN이 없습니다.');\n  }\n\n  if (!item.receiverKey) {\n    throw new Error('카카오채널 수신 식별자가 없습니다.');\n  }\n\n  const payload = {\n    channelId: env.KAKAO_CHANNEL_ID,\n    receiverKey: item.receiverKey,\n    messageType: item.messageType || 'text',\n    text: renderedBody,\n    link: item.reportLink || undefined,\n  };\n\n  const response = await fetch(`${env.KAKAO_CHANNEL_API_BASE_URL}/v1/channel/message/send`, {\n    method: 'POST',\n    headers: {\n      Authorization: `Bearer ${env.KAKAO_CHANNEL_ACCESS_TOKEN}`,\n      'Content-Type': 'application/json',\n    },\n    body: JSON.stringify(payload),\n  });\n\n  if (!response.ok) {\n    const text = await response.text();\n    throw new Error(`Kakao API 실패 ${response.status}: ${text}`);\n  }\n\n  return response.json();\n}\n\nasync function createSendLog(item, result, detail) {\n  try {\n    await createNotionPage(CRM_LOG_DB_ID, {\n      로그명: { title: [{ text: { content: `${item.title} - ${result}` } }] },\n      '실행 시각': { date: { start: new Date().toISOString() } },\n      '실행 주체': { select: { name: 'Browser MVP' } },\n      '처리 결과': { select: { name: result } },\n      '오류 메시지': { rich_text: [{ text: { content: detail?.errorMessage || '' } }] },\n      'API 응답 본문': { rich_text: [{ text: { content: JSON.stringify(detail || {}) } }] },\n    });\n  } catch (error) {\n    console.warn('[CRM 로그] 기록 실패:', error.message);\n  }\n}\n\nfunction findRelatedKb(session, kb) {\n  const symptomSet = new Set(session.symptoms || []);\n  const patternSet = new Set(session.patternKeywords || []);\n\n  const related = kb\n    .filter((item) => item.status === '사용중')\n    .map((item) => {\n      const symptomScore = item.symptoms.filter((symptom) => symptomSet.has(symptom)).length;\n      const patternScore = item.patterns.filter((pattern) => patternSet.has(pattern)).length;\n      return { ...item, score: symptomScore + patternScore };\n    })\n    .filter((item) => item.score > 0)\n    .sort((a, b) => b.score - a.score)\n    .slice(0, 5);\n\n  return related;\n}\n\nfunction StatusBadge({ value }) {\n  let className = 'badge';\n  if (['발송완료', '승인완료', '사용중'].includes(value)) className = 'badge green';\n  if (['예약됨', '재시도대기', 'AI생성대기', '문진완료'].includes(value)) className = 'badge amber';\n  if (['실패', '예약초과', '오류'].includes(value)) className = 'badge red';\n  return <span className={className}>{value || '미정'}</span>;\n}\n\nfunction App() {\n  const [env, setEnv] = useState(FALLBACK_ENV);\n  const [sessions, setSessions] = useState(FALLBACK_SESSIONS);\n  const [kb, setKb] = useState(FALLBACK_KB);\n  const [queue, setQueue] = useState(FALLBACK_QUEUE);\n  const [logs, setLogs] = useState([]);\n  const [loading, setLoading] = useState(true);\n  const [usedFallback, setUsedFallback] = useState(false);\n  const [error, setError] = useState('');\n  const [polling, setPolling] = useState(false);\n  const [lastRunAt, setLastRunAt] = useState('');\n  const pollRef = useRef(null);\n\n  const todaySessions = useMemo(() => sessions.filter((item) => item.visitDate === '2026-05-13'), [sessions]);\n  const processableQueue = useMemo(() => queue.filter(isProcessable), [queue]);\n  const failedQueue = useMemo(() => queue.filter((item) => ['실패', '재시도대기', '예약초과'].includes(item.sendStatus)), [queue]);\n  const selectedSession = todaySessions[0] || sessions[0];\n  const relatedKb = useMemo(() => selectedSession ? findRelatedKb(selectedSession, kb) : [], [selectedSession, kb]);\n\n  async function handleLoadAll() {\n    setLoading(true);\n    setError('');\n\n    try {\n      const [envResult, sessionResult, kbResult, queueResult] = await Promise.all([\n        loadEnvSettings(),\n        loadSessions(),\n        loadMedicineKb(),\n        loadCrmQueue(),\n      ]);\n\n      setEnv(envResult.env);\n      setSessions(sessionResult.sessions);\n      setKb(kbResult.kb);\n      setQueue(queueResult.queue);\n      setUsedFallback(envResult.usedFallback || sessionResult.usedFallback || kbResult.usedFallback || queueResult.usedFallback);\n    } catch (loadError) {\n      console.warn('[초기 로드] 실패:', loadError.message);\n      setError(loadError.message);\n      setUsedFallback(true);\n    } finally {\n      setLoading(false);\n    }\n  }\n\n  async function updateQueueStatus(itemId, nextStatus, lastError) {\n    setQueue((current) => current.map((item) => {\n      if (item.id !== itemId) return item;\n      return {\n        ...item,\n        sendStatus: nextStatus,\n        lastError: lastError ?? item.lastError,\n      };\n    }));\n\n    if (!itemId.startsWith('queue-')) {\n      await patchNotionPage(itemId, {\n        '발송 상태': { status: { name: nextStatus } },\n        '마지막 오류': { rich_text: [{ text: { content: lastError || '' } }] },\n        '마지막 처리 시각': { date: { start: new Date().toISOString() } },\n      });\n    }\n  }\n\n  async function handleProcessItem(item) {\n    try {\n      if (!isProcessable(item)) {\n        await createSendLog(item, '스킵', { errorMessage: '처리 대상 상태가 아닙니다.' });\n        return;\n      }\n\n      if (item.sendStatus === '예약됨' && isOverdue(item.scheduledAt)) {\n        await updateQueueStatus(item.id, '예약초과', '브라우저가 닫혀 있던 동안 예약 시간이 지났습니다.');\n        await createSendLog(item, '스킵', { errorMessage: '예약초과' });\n        return;\n      }\n\n      if (item.sendStatus === '예약됨' && !isDue(item.scheduledAt)) {\n        await createSendLog(item, '스킵', { errorMessage: '예약 시각 전입니다.' });\n        return;\n      }\n\n      await updateQueueStatus(item.id, '발송중', '');\n      const renderedBody = renderTemplate(item.messageBody, {\n        patientCode: item.receiverName,\n        reportLink: item.reportLink,\n      });\n\n      const result = await sendKakaoChannelMessage(env, item, renderedBody);\n      await updateQueueStatus(item.id, '발송완료', '');\n      await createSendLog(item, '성공', result);\n      setLogs((current) => [{ id: `${item.id}-${Date.now()}`, title: item.title, result: '성공', at: new Date().toISOString() }, ...current]);\n    } catch (processError) {\n      console.warn('[큐 처리] 실패:', processError.message);\n      const maxRetry = Number(env.MAX_RETRY_COUNT || 3);\n      const retryCount = Number(item.retryCount || 0) + 1;\n      const nextStatus = retryCount >= maxRetry ? '실패' : '재시도대기';\n\n      setQueue((current) => current.map((queueItem) => {\n        if (queueItem.id !== item.id) return queueItem;\n        return {\n          ...queueItem,\n          sendStatus: nextStatus,\n          retryCount,\n          lastError: processError.message,\n        };\n      }));\n\n      await createSendLog(item, '실패', { errorMessage: processError.message, retryCount });\n      setLogs((current) => [{ id: `${item.id}-${Date.now()}`, title: item.title, result: '실패', at: new Date().toISOString(), error: processError.message }, ...current]);\n    }\n  }\n\n  async function handleProcessNow() {\n    setLastRunAt(new Date().toISOString());\n    const targets = queue.filter(isProcessable);\n\n    for (const item of targets) {\n      await handleProcessItem(item);\n    }\n  }\n\n  function handleStartPolling() {\n    if (pollRef.current) return;\n    const seconds = Number(env.POLL_INTERVAL_SECONDS || DEFAULT_POLL_INTERVAL_SECONDS);\n    setPolling(true);\n    pollRef.current = window.setInterval(() => {\n      handleProcessNow().catch((pollError) => {\n        console.warn('[Polling] 처리 실패:', pollError.message);\n      });\n    }, seconds * 1000);\n  }\n\n  function handleStopPolling() {\n    if (pollRef.current) {\n      window.clearInterval(pollRef.current);\n      pollRef.current = null;\n    }\n    setPolling(false);\n  }\n\n  function handleRunDoctor() {\n    const checks = [\n      ['Notion API 연결', usedFallback ? '확인 필요' : '정상'],\n      ['진료 세션 DB', sessions.length ? '정상' : '빈 데이터'],\n      ['한의학 자료 DB', kb.length ? '정상' : '자료 없음'],\n      ['CRM 큐 DB', queue.length ? '정상' : '빈 데이터'],\n      ['`.env` 필수 Key', env.KAKAO_CHANNEL_ACCESS_TOKEN ? '정상' : '누락'],\n      ['Kakao token', maskSecret(env.KAKAO_CHANNEL_ACCESS_TOKEN)],\n      ['Timezone', env.TIMEZONE || '확인 필요'],\n      ['브라우저 polling', polling ? '실행중' : '중지'],\n    ];\n\n    setLogs((current) => [\n      { id: `doctor-${Date.now()}`, title: '점검 실행', result: '완료', at: new Date().toISOString(), checks },\n      ...current,\n    ]);\n  }\n\n  useEffect(() => {\n    handleLoadAll();\n    return () => handleStopPolling();\n  }, []);\n\n  return (\n    <main className=\"app\">\n      <section className=\"header\">\n        <div>\n          <h1>한의원 AI 진료 자동화 MVP</h1>\n          <p>진료 세션, 한의학 자료 기반 CDSS, CRM 카카오 발송 큐를 한 화면에서 운영합니다.</p>\n          <div className=\"warning\">\n            내부 MVP 전용입니다. `.env` DB에서 Kakao token을 읽는 방식은 공개 배포·외부 공유 링크·GitHub Pages 공개 운영에 사용하지 마세요.\n          </div>\n        </div>\n        <div className=\"actions\">\n          <button onClick={handleLoadAll}>새로고침</button>\n          <button onClick={handleProcessNow}>지금 처리</button>\n          <button onClick={handleStartPolling} disabled={polling}>Polling 시작</button>\n          <button className=\"secondary\" onClick={handleStopPolling} disabled={!polling}>Polling 중지</button>\n          <button className=\"secondary\" onClick={handleRunDoctor}>점검 실행</button>\n        </div>\n      </section>\n\n      {loading && <div className=\"state\">불러오는 중...</div>}\n      {error && <div className=\"state error\">{error}</div>}\n      {usedFallback && <div className=\"state mock\">Notion API 연결 실패 또는 빈 데이터로 mock fallback을 표시 중입니다.</div>}\n\n      <section className=\"cards\">\n        <div className=\"card\">\n          <div className=\"label\">오늘 진료</div>\n          <div className=\"value\">{todaySessions.length}</div>\n        </div>\n        <div className=\"card\">\n          <div className=\"label\">CRM 처리 대상</div>\n          <div className=\"value\">{processableQueue.length}</div>\n        </div>\n        <div className=\"card\">\n          <div className=\"label\">실패·재시도</div>\n          <div className=\"value\">{failedQueue.length}</div>\n        </div>\n        <div className=\"card\">\n          <div className=\"label\">Polling</div>\n          <div className=\"value\">{polling ? 'ON' : 'OFF'}</div>\n        </div>\n      </section>\n\n      <section className=\"grid\">\n        <div>\n          <div className=\"panel\">\n            <div className=\"panel-head\">\n              <h2>오늘의 진료 세션</h2>\n              <StatusBadge value={selectedSession?.stage} />\n            </div>\n            <div className=\"list\">\n              {todaySessions.map((session) => (\n                <div key={session.id} className=\"item\">\n                  <div className=\"item-top\">\n                    <div>\n                      <div className=\"title\">{session.title}</div>\n                      <div className=\"meta\">환자 코드 {session.patientCode} · {session.doctor} · {session.visitDate}</div>\n                    </div>\n                    <StatusBadge value={session.aiStatus} />\n                  </div>\n                  <div className=\"badges\">\n                    {session.symptoms.map((symptom) => <span key={symptom} className=\"badge\">{symptom}</span>)}\n                    {session.patternKeywords.map((pattern) => <span key={pattern} className=\"badge amber\">{pattern}</span>)}\n                  </div>\n                </div>\n              ))}\n            </div>\n          </div>\n\n          <div className=\"panel\">\n            <h2>한의학 자료 DB 기반 CDSS 참고 자료</h2>\n            {relatedKb.length === 0 && <div className=\"state\">참조 자료 없음 / 한의사 직접 검토 필요</div>}\n            <div className=\"list\">\n              {relatedKb.map((item) => (\n                <div key={item.id} className=\"item\">\n                  <div className=\"item-top\">\n                    <div className=\"title\">{item.title}</div>\n                    <StatusBadge value={item.type} />\n                  </div>\n                  <div className=\"meta\">{item.summary}</div>\n                  <div className=\"meta\">주의/금기: {item.caution || '기록 없음'}</div>\n                </div>\n              ))}\n            </div>\n          </div>\n\n          <div className=\"panel\">\n            <h2>최근 처리 로그</h2>\n            {logs.length === 0 && <div className=\"state\">아직 브라우저에서 실행한 로그가 없습니다.</div>}\n            {logs.length > 0 && (\n              <table className=\"table\">\n                <thead>\n                  <tr>\n                    <th>시각</th>\n                    <th>항목</th>\n                    <th>결과</th>\n                    <th>오류</th>\n                  </tr>\n                </thead>\n                <tbody>\n                  {logs.map((log) => (\n                    <tr key={log.id}>\n                      <td>{log.at}</td>\n                      <td>{log.title}</td>\n                      <td>{log.result}</td>\n                      <td>{log.error || ''}</td>\n                    </tr>\n                  ))}\n                </tbody>\n              </table>\n            )}\n          </div>\n        </div>\n\n        <div>\n          <div className=\"panel\">\n            <div className=\"panel-head\">\n              <h2>CRM 카카오 발송 큐</h2>\n              <span className=\"badge\">{queue.length}건</span>\n            </div>\n            <div className=\"list\">\n              {queue.map((item) => (\n                <div key={item.id} className=\"item\">\n                  <div className=\"item-top\">\n                    <div>\n                      <div className=\"title\">{item.title}</div>\n                      <div className=\"meta\">{item.source} · {item.receiverName} · {item.sendMode}</div>\n                    </div>\n                    <StatusBadge value={item.sendStatus} />\n                  </div>\n                  <div className=\"meta\">\n                    예약: {item.scheduledAt || '없음'} · 재시도: {item.retryCount} · 오류: {item.lastError || '없음'}\n                  </div>\n                  <div className=\"queue-actions\">\n                    <button onClick={() => handleProcessItem(item)}>지금 처리</button>\n                    <button className=\"secondary\" onClick={() => updateQueueStatus(item.id, '스킵', '수동 스킵')}>스킵</button>\n                  </div>\n                </div>\n              ))}\n            </div>\n          </div>\n\n          <div className=\"panel\">\n            <h2>점검 패널</h2>\n            <div className=\"kv\">\n              <div className=\"kv-row\"><span>Notion API</span><strong>{usedFallback ? 'fallback' : '연결됨'}</strong></div>\n              <div className=\"kv-row\"><span>Kakao token</span><strong>{maskSecret(env.KAKAO_CHANNEL_ACCESS_TOKEN)}</strong></div>\n              <div className=\"kv-row\"><span>Polling 주기</span><strong>{env.POLL_INTERVAL_SECONDS}초</strong></div>\n              <div className=\"kv-row\"><span>최대 재시도</span><strong>{env.MAX_RETRY_COUNT}회</strong></div>\n              <div className=\"kv-row\"><span>Timezone</span><strong>{env.TIMEZONE}</strong></div>\n              <div className=\"kv-row\"><span>마지막 처리</span><strong>{lastRunAt || '없음'}</strong></div>\n              <div className=\"kv-row\"><span>현재 시각</span><strong>{MOCK_NOW}</strong></div>\n            </div>\n            <p className=\"footer-note\">검증 불가: 실제 카카오채널 API 테스트 호출은 유효 token과 채널 권한이 있어야 확인할 수 있습니다.</p>\n          </div>\n        </div>\n      </section>\n    </main>\n  );\n}\n\nReactDOM.createRoot(document.getElementById('root')).render(<App />);";
+try{var __result=Babel.transform(__code,{filename:"app.tsx",presets:["react","typescript"],plugins:[__np_strip_imports,__np_dedupe_top_consts,__np_jsx_decode],generatorOpts:{jsescOption:{minimal:true}},sourceType:"module"});try{var __s=document.createElement("script");__s.type="module";__s.textContent=__result.code;document.head.appendChild(__s);}catch(runErr){console.error("[user code runtime] "+(runErr.message||runErr)+"\n"+(runErr.stack||""));}}catch(transErr){var lm=(transErr.message||"").match(/\((\d+):(\d+)\)/);var ln=lm?parseInt(lm[1],10):0;var cx="";if(ln>0){var ls=__code.split("\n");var s=Math.max(0,ln-3),e=Math.min(ls.length,ln+2);cx="\n--- 사용자 코드 주변 ---\n"+ls.slice(s,e).map(function(l,i){return (s+i+1)+": "+l;}).join("\n");}console.error("[Babel transform 실패] "+(transErr.message||transErr)+cx);}
+</script>
+<script>
+async function runQueueWorker() {
+  const env = await loadEnvSettings();
+  const queue = await queryCrmQueue();
+  const targets = queue.filter(isProcessableQueueItem);
+
+  for (const item of targets) {
+    try {
+      if (isExpiredReservation(item)) {
+        await updateQueueStatus(item.id, '예약초과', '브라우저가 닫혀 있던 동안 예약 시간이 지났습니다.');
+        await createSendLog(item, '스킵');
+        continue;
+      }
+
+      if (item.status === '예약됨' && isDue(item.scheduledAt)) {
+        await updateQueueStatus(item.id, '발송대기');
+      }
+
+      await lockQueueItem(item.id);
+      const body = renderTemplate(item.messageBody, item.variables);
+      const result = await sendKakaoChannelMessage(env, item.receiverKey, body);
+
+      await updateQueueStatus(item.id, '발송완료');
+      await createSendLog(item, '성공', result);
+    } catch (error) {
+      const retryCount = item.retryCount + 1;
+      const nextStatus = retryCount >= env.MAX_RETRY_COUNT ? '실패' : '재시도대기';
+      await updateQueueFailure(item.id, nextStatus, retryCount, error.message);
+      await createSendLog(item, '실패', { error });
+    }
+  }
+}
+</script>
+</body></html>
